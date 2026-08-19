@@ -35,11 +35,11 @@ connectDB();
 
 // Middleware
 const allowedOrigins = [
+  "http://localhost:5173",
   "http://localhost:3000",
   "https://eagleincensesticks.com",
   "https://www.eagleincensesticks.com",
   "https://admin.eagleincensesticks.com",
-  "https://eagle-nt3o-git-main-ayodhya-guptas-projects.vercel.app",
 ];
 
 app.use(
