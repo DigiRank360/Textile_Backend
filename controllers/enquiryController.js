@@ -51,15 +51,19 @@ export const createEnquiry = async (req, res) => {
       productName: cleanProductName,
     });
 
-    const smtpUser = process.env.SMTP_USER;
     const adminEmail = process.env.ADMIN_EMAIL;
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const isResendTestMode =
+      String(process.env.RESEND_TEST_MODE || "true").toLowerCase() === "true";
 
-    if (!smtpUser) {
-      console.error("SMTP_USER is missing in environment variables");
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY is missing in environment variables");
     }
 
     if (!adminEmail) {
-      console.error("ADMIN_EMAIL is missing in environment variables");
+      console.warn(
+        "ADMIN_EMAIL is missing in environment variables; admin email notification will be skipped.",
+      );
     }
 
     const safeName = escapeHtml(cleanName);
@@ -123,7 +127,7 @@ export const createEnquiry = async (req, res) => {
     const emailTasks = [];
 
     // Admin notification email
-    if (adminEmail && smtpUser) {
+    if (adminEmail && resendApiKey) {
       emailTasks.push(
         sendEmail({
           to: adminEmail,
@@ -137,16 +141,24 @@ export const createEnquiry = async (req, res) => {
     }
 
     // Customer confirmation email
-    if (smtpUser) {
+    const customerEmailAllowed =
+      !isResendTestMode ||
+      cleanEmail.toLowerCase() === String(adminEmail || "").toLowerCase();
+
+    if (resendApiKey && customerEmailAllowed) {
       emailTasks.push(
         sendEmail({
           to: cleanEmail,
-          replyTo: adminEmail || smtpUser,
+          replyTo: adminEmail || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
           subject: cleanProductName
             ? "We received your quote request"
             : "We received your enquiry",
           html: customerHtml,
         }),
+      );
+    } else if (isResendTestMode && cleanEmail && adminEmail) {
+      console.log(
+        `Resend test mode enabled: skipping customer email to ${cleanEmail} because only ${adminEmail} is allowed for testing.`,
       );
     }
 

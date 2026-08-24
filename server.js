@@ -6,7 +6,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import connectDB from "./config/db.js";
-import transporter from "./config/mailer.js";
 import mailRoutes from "./routes/mailRoutes.js";
 
 import authRoutes from "./routes/authRoutes.js";
@@ -15,20 +14,10 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 
-console.log("SMTP_USER:", process.env.SMTP_USER ? "SET" : "MISSING");
-console.log("SMTP_PASS:", process.env.SMTP_PASS ? "SET" : "MISSING");
+console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY ? "SET" : "MISSING");
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-transporter
-  .verify()
-  .then(() => {
-    console.log("✅ SMTP Ready");
-  })
-  .catch((error) => {
-    console.error("❌ SMTP Verify Error:", error.message);
-  });
 
 // Database
 connectDB();

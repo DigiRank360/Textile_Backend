@@ -4,14 +4,21 @@ export const sendTestMail = async (req, res) => {
   try {
     const { email } = req.body;
 
-    await sendEmail(
-      email,
-      "Welcome to ERP",
-      `
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    await sendEmail({
+      to: email,
+      subject: "Welcome to ERP",
+      html: `
         <h2>Hello 👋</h2>
-        <p>Your email has been sent successfully using Nodemailer.</p>
-      `
-    );
+        <p>Your email has been sent successfully using Resend.</p>
+      `,
+    });
 
     res.status(200).json({
       success: true,

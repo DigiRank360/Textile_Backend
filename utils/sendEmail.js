@@ -1,52 +1,36 @@
-import transporter from "../config/mailer.js";
+import { Resend } from "resend";
 
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const sendEmail = async ({
-  to,
-  subject,
-  html,
-  text = "",
-  replyTo,
-}) => {
+export const sendEmail = async ({ to, subject, html, replyTo }) => {
   try {
-    if (!to) {
-      throw new Error("Recipient email is required.");
+    if (!to || !subject || !html) {
+      throw new Error("Recipient, subject, and html content are required.");
     }
 
-    if (!subject) {
-      throw new Error("Email subject is required.");
-    }
+    const recipients = Array.isArray(to) ? to : [to];
+    const fromAddress =
+      process.env.RESEND_FROM_EMAIL ||
+      process.env.ADMIN_EMAIL ||
+      "onboarding@resend.dev";
 
-    if (!html) {
-      throw new Error("Email content is required.");
-    }
-
-    const mailOptions = {
-      from: {
-        name: "Eagle Incense Sticks",
-        address: process.env.SMTP_USER,
-      },
-      to,
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: recipients,
       subject,
       html,
-      text,
-      ...(replyTo && { replyTo }),
-    };
+      ...(replyTo ? { reply_to: replyTo } : {}),
+    });
 
-    const info = await transporter.sendMail(mailOptions);
+    if (error) {
+      console.error("❌ Resend Error:", error);
+      throw new Error(error.message);
+    }
 
-    console.log(`📧 Email sent successfully: ${info.messageId}`);
-
-    return {
-      success: true,
-      messageId: info.messageId,
-      response: info.response,
-    };
+    console.log(`📧 Email sent successfully! ID: ${data.id}`);
+    return { success: true, messageId: data.id };
   } catch (error) {
-    console.error("❌ Email sending failed:", error);
-
-    throw new Error(
-      `Unable to send email: ${error.message}`
-    );
+    console.error("❌ Email failed:", error.message);
+    throw new Error(`Unable to send email: ${error.message}`);
   }
 };
