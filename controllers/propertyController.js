@@ -1,201 +1,140 @@
 import Property from "../models/Property.js";
-import cloudinary, {
-  configureCloudinary,
-  isCloudinaryConfigured,
-} from "../config/cloudinary.js";
+import { saveImage, removeLocalImage } from "../utils/saveImage.js";
 
-const uploadImage = (file) =>
-  new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "eagle/products",
-        resource_type: "image",
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result.secure_url);
-      }
-    );
+const fail = (res, err, code = 500) =>
+  res.status(code).json({ success: false, message: err.message || err });
 
-    stream.end(file.buffer);
-  });
+const parseList = (value) => {
+  if (!value) return [];
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return Array.isArray(parsed)
+      ? parsed.map((v) => String(v).trim()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+};
 
-// ===================================
-// Add Property
-// ===================================
+const toBool = (v) => v === true || v === "true";
+
 export const createProperty = async (req, res) => {
   try {
-    console.log("Request Body:", req.body);
+    const { title, price, description, category, featured, status } = req.body;
 
-    console.log(
-      "Property Schema Fields:",
-      Object.keys(Property.schema.paths)
-    );
-
-    const { title, price, description } = req.body;
-
-    // Validation
-    if (!title || !price) {
-      return res.status(400).json({
-        success: false,
-        message: "Title and Price are required.",
-      });
-    }
-
-    if (req.files?.length && !isCloudinaryConfigured()) {
-      return res.status(500).json({
-        success: false,
-        message: "Image storage is not configured. Add Cloudinary environment variables.",
-      });
-    }
-
-    if (req.files?.length) {
-      configureCloudinary();
+    if (!title?.trim() || price === undefined || price === "") {
+      return fail(res, "Title and Price are required.", 400);
     }
 
     const fileImages = req.files?.length
-      ? await Promise.all(req.files.map(uploadImage))
+      ? await Promise.all(req.files.map((f) => saveImage(f, "products")))
       : [];
 
-    // External Image URLs
-    let urlImages = [];
-
-    if (req.body.imageUrls) {
-      try {
-        const parsed =
-          typeof req.body.imageUrls === "string"
-            ? JSON.parse(req.body.imageUrls)
-            : req.body.imageUrls;
-
-        if (Array.isArray(parsed)) {
-          urlImages = parsed
-            .map((url) => url.trim())
-            .filter(Boolean);
-        }
-      } catch (err) {
-        console.warn("Invalid imageUrls payload:", err.message);
-      }
-    }
-
-    const images = [...fileImages, ...urlImages];
-
-    // Create Property
     const property = await Property.create({
       title: title.trim(),
       price: Number(price),
       description: description?.trim() || "",
-      images,
-
-      // Default values for remaining schema fields
-      category: null,
-      location: "",
-      address: "",
-      googleMap: "",
-
-      ownerName: "",
-      phone: "",
-      email: "",
-
-      area: 0,
-      bedrooms: 0,
-      bathrooms: 0,
-      parking: 0,
-
-      features: [],
-      featured: false,
-      status: "Active",
+      images: [...fileImages, ...parseList(req.body.imageUrls)],
+      category: category || null,
+      features: parseList(req.body.features),
+      featured: toBool(featured),
+      status: status === "Inactive" ? "Inactive" : "Active",
     });
 
     return res.status(201).json({
       success: true,
-      message: "Property Added Successfully",
+      message: "Product Added Successfully",
       property,
     });
   } catch (error) {
     console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return fail(res, error);
   }
 };
 
-// ===================================
-// Get All Properties
-// ===================================
+export const updateProperty = async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) return fail(res, "Product Not Found", 404);
+
+    const { title, price, description, category, featured, status } = req.body;
+
+    if (title !== undefined) property.title = title.trim();
+    if (price !== undefined && price !== "") property.price = Number(price);
+    if (description !== undefined) property.description = description.trim();
+    if (category !== undefined) property.category = category || null;
+    if (featured !== undefined) property.featured = toBool(featured);
+    if (status !== undefined) {
+      property.status = status === "Inactive" ? "Inactive" : "Active";
+    }
+    if (req.body.features !== undefined) {
+      property.features = parseList(req.body.features);
+    }
+
+    // existingImages = images the admin chose to keep; the rest are removed.
+    const previous = [...property.images];
+    const kept =
+      req.body.existingImages !== undefined
+        ? parseList(req.body.existingImages).filter((img) => previous.includes(img))
+        : previous;
+
+    const newFiles = req.files?.length
+      ? await Promise.all(req.files.map((f) => saveImage(f, "products")))
+      : [];
+
+    property.images = [...kept, ...newFiles];
+    await property.save();
+
+    await Promise.all(
+      previous.filter((img) => !kept.includes(img)).map(removeLocalImage)
+    );
+
+    return res.json({
+      success: true,
+      message: "Product Updated Successfully",
+      property,
+    });
+  } catch (error) {
+    console.error(error);
+    return fail(res, error);
+  }
+};
+
 export const getProperties = async (req, res) => {
   try {
     const properties = await Property.find()
       .populate("category", "name")
       .sort({ createdAt: -1 });
 
-    return res.json({
-      success: true,
-      count: properties.length,
-      properties,
-    });
+    return res.json({ success: true, count: properties.length, properties });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return fail(res, error);
   }
 };
 
-// ===================================
-// Get Single Property
-// ===================================
 export const getProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id).populate(
       "category",
       "name"
     );
-
-    if (!property) {
-      return res.status(404).json({
-        success: false,
-        message: "Property Not Found",
-      });
-    }
-
-    return res.json({
-      success: true,
-      property,
-    });
+    if (!property) return fail(res, "Property Not Found", 404);
+    return res.json({ success: true, property });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return fail(res, error);
   }
 };
 
-// ===================================
-// Delete Property
-// ===================================
 export const deleteProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
+    if (!property) return fail(res, "Property Not Found", 404);
 
-    if (!property) {
-      return res.status(404).json({
-        success: false,
-        message: "Property Not Found",
-      });
-    }
-
+    await Promise.all(property.images.map(removeLocalImage));
     await property.deleteOne();
 
-    return res.json({
-      success: true,
-      message: "Property Deleted Successfully",
-    });
+    return res.json({ success: true, message: "Property Deleted Successfully" });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return fail(res, error);
   }
 };

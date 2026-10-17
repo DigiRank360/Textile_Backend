@@ -43,7 +43,7 @@ export const subscribeNewsletter = async (req, res) => {
     }
 
     const info = await transporter.sendMail({
-      from: `"Eagle Incense Sticks" <${smtpUser}>`,
+      from: `"Eagle Textile" <${smtpUser}>`,
       to: adminEmail,
       replyTo: cleanEmail,
       subject: "New Newsletter Subscription",
@@ -67,7 +67,7 @@ export const subscribeNewsletter = async (req, res) => {
             </h2>
 
             <p>
-              A new user has subscribed to the Eagle Incense Sticks newsletter.
+              A new user has subscribed to the Eagle Textile newsletter.
             </p>
 
             <div style="

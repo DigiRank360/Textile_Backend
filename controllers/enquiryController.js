@@ -119,7 +119,7 @@ export const createEnquiry = async (req, res) => {
           <div style="margin-top:16px;padding:16px;background:#f5efe3;border-radius:8px;">
             <strong>Your message:</strong><br/>${safeMessage}
           </div>
-          <p style="margin-top:20px;">Regards,<br/>Eagle Incense Sticks Team</p>
+          <p style="margin-top:20px;">Regards,<br/>Eagle Textile Team</p>
         </div>
       </div>
     `;
@@ -149,7 +149,7 @@ export const createEnquiry = async (req, res) => {
       emailTasks.push(
         sendEmail({
           to: cleanEmail,
-          replyTo: adminEmail || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+          replyTo: adminEmail || process.env.RESEND_FROM_EMAIL || "eaglefabrichub@gmail.com",
           subject: cleanProductName
             ? "We received your quote request"
             : "We received your enquiry",

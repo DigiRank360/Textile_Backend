@@ -12,6 +12,7 @@ import authRoutes from "./routes/authRoutes.js";
 import enquiryRoutes from "./routes/enquiryRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
+import bannerRoutes from "./routes/bannerRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 
 console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY ? "SET" : "MISSING");
@@ -23,12 +24,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 connectDB();
 
 // Middleware
+const isProd = process.env.NODE_ENV === "production";
+const envOrigins = (process.env.CLIENT_URLS || "")
+  .split(",")
+  .map((o) => o.trim().replace(/\/$/, ""))
+  .filter(Boolean);
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://eagleincensesticks.com",
-  "https://www.eagleincensesticks.com",
-  "https://admin.eagleincensesticks.com",
+  ...envOrigins,
+  ...(isProd
+    ? []
+    : [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:3000",
+      ]),
 ];
 
 app.use(
@@ -56,13 +66,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/enquiries", enquiryRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/properties", propertyRoutes);
+app.use("/api/banners", bannerRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/mail", mailRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "🚀 Eagle Backend is Running",
+    message: "🚀 Eagle Textile Backend is Running",
   });
 });
 

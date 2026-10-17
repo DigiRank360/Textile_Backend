@@ -1,8 +1,16 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend is optional: without an API key the server still runs and emails are skipped.
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 export const sendEmail = async ({ to, subject, html, replyTo }) => {
+  if (!resend) {
+    console.warn("⚠️ RESEND_API_KEY missing - email skipped.");
+    return { success: false, skipped: true };
+  }
+
   try {
     if (!to || !subject || !html) {
       throw new Error("Recipient, subject, and html content are required.");
@@ -12,7 +20,7 @@ export const sendEmail = async ({ to, subject, html, replyTo }) => {
     const fromAddress =
       process.env.RESEND_FROM_EMAIL ||
       process.env.ADMIN_EMAIL ||
-      "onboarding@resend.dev";
+      "eaglefabrichub@gmail.com";
 
     const { data, error } = await resend.emails.send({
       from: fromAddress,

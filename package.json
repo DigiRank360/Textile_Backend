@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed": "node seedAdmin.js"
+    "seed": "node seedAdmin.js",
+    "seed:demo": "node seedDemo.js",
+    "db": "node scripts/devDb.js"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +27,7 @@
     "resend": "^6.22.0"
   },
   "devDependencies": {
+    "mongodb-memory-server": "^11.3.0",
     "nodemon": "^3.1.14"
   }
 }

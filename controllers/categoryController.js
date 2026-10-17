@@ -5,7 +5,7 @@ import Category from "../models/Category.js";
 // =======================
 export const addCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, status } = req.body;
 
     if (!name || name.trim() === "") {
       return res.status(400).json({
@@ -28,6 +28,7 @@ export const addCategory = async (req, res) => {
     const category = await Category.create({
       name: name.trim(),
       description,
+      ...(status !== undefined && { status }),
     });
 
     return res.status(201).json({
@@ -108,13 +109,14 @@ export const getCategory = async (req, res) => {
 export const updateCategory = async (req, res) => {
   try {
 
-    const { name, description } = req.body;
+    const { name, description, status } = req.body;
 
     const category = await Category.findByIdAndUpdate(
       req.params.id,
       {
         name,
         description,
+        ...(status !== undefined && { status }),
       },
       {
         new: true,
